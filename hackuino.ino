@@ -46,7 +46,8 @@ int read_LCD_buttons(){
 }
 
 bool isExiting(){
-  return read_LCD_buttons() == btnLEFT;
+  btnLAST = read_LCD_buttons();
+  return btnLAST == btnLEFT;
 }
 
 // Menu
@@ -174,7 +175,6 @@ void gpsLocation(){
   lcd.setCursor(0,0);
   lcd.print("Waiting... ");
 
-
   while(true){
     while (Serial1.available() > 0){
       if (gps.encode(Serial1.read())){
@@ -191,13 +191,16 @@ void gpsLocation(){
         }  
       }
       if(isExiting()){
-        break;
+        goto exit;
       }
     }
     if(isExiting()){
-      break;
+      goto exit;
     }
   }
+
+  exit:
+  return;
 }
 
 void gpsTime(){
@@ -211,7 +214,6 @@ void gpsTime(){
 
   lcd.setCursor(0,0);
   lcd.print("Waiting... ");
-
 
   while(true){
     Serial.println(Serial1.available());
@@ -260,13 +262,16 @@ void gpsTime(){
       }
       
       if(isExiting()){
-        break;
+        goto exit;
       }
     }
     if(isExiting()){
-      break;
+      goto exit;
     }
   }
+
+  exit:
+  return;
 }
 
 // Arduino
