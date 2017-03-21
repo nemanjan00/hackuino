@@ -1,3 +1,9 @@
+//GPS
+
+#include <TinyGPS++.h>
+
+TinyGPSPlus gps;
+
 // NFC
 
 #include <PN532_HSU.h>
@@ -6,7 +12,7 @@
 PN532_HSU pn532hsu(Serial1);
 PN532 nfc(pn532hsu);
 
-// Displayi & buttons
+// Display & buttons
 
 #include <LiquidCrystal.h>
 #include <stdio.h>
@@ -37,6 +43,10 @@ int read_LCD_buttons(){
 	if (adc_key_in < 690) return btnSELECT;	
 
 	return btnNONE;
+}
+
+bool isExiting(){
+  return read_LCD_buttons() == btnLEFT;
 }
 
 // Menu
@@ -148,9 +158,116 @@ void nfcID(){
 			break;
 		}
 
+    if(isExiting()){
+      break;
+    }
+
 		delay(100);
 	}
 };
+
+void gpsLocation(){
+  Serial1.begin(9600);
+
+  clearScreen();
+
+  lcd.setCursor(0,0);
+  lcd.print("Waiting... ");
+
+
+  while(true){
+    while (Serial1.available() > 0){
+      if (gps.encode(Serial1.read())){
+        if (gps.location.isValid()){
+          clearScreen();
+
+          lcd.setCursor(0,0);
+          lcd.print(gps.location.lat(), 13);
+
+          lcd.setCursor(0,1);
+          lcd.print(gps.location.lng(), 13);
+
+          delay(100);
+        }  
+      }
+      if(isExiting()){
+        break;
+      }
+    }
+    if(isExiting()){
+      break;
+    }
+  }
+}
+
+void gpsTime(){
+  int cleared = 0;
+  int line = 0;
+  
+  Serial1.begin(9600);
+  Serial.begin(9600);
+
+  clearScreen();
+
+  lcd.setCursor(0,0);
+  lcd.print("Waiting... ");
+
+
+  while(true){
+    Serial.println(Serial1.available());
+    while (Serial1.available() > 0){
+      Serial.println(Serial1.available());
+      cleared = 0;
+      line = 0;
+      
+      if (gps.encode(Serial1.read())){
+        if (gps.time.isValid()){
+          Serial.println("1");
+          if(!cleared){
+            clearScreen();
+            cleared = true;
+          }
+
+          lcd.setCursor(0,line++);          
+
+          if (gps.time.hour() < 10) lcd.print(F("0"));
+          lcd.print(gps.time.hour());
+          lcd.print(F(":"));
+          if (gps.time.minute() < 10) lcd.print(F("0"));
+          lcd.print(gps.time.minute());
+          lcd.print(F(":"));
+          if (gps.time.second() < 10) lcd.print(F("0"));
+          lcd.print(gps.time.second());
+          lcd.print(F("."));
+          if (gps.time.centisecond() < 10) lcd.print(F("0"));
+          lcd.print(gps.time.centisecond());
+        }
+        
+        if (gps.date.isValid()){
+          if(!cleared){
+            clearScreen();
+            cleared = true;
+          }
+
+          lcd.setCursor(0,line++);          
+
+          lcd.print(gps.date.month());
+          lcd.print(F("/"));
+          lcd.print(gps.date.day());
+          lcd.print(F("/"));
+          lcd.print(gps.date.year());
+        }
+      }
+      
+      if(isExiting()){
+        break;
+      }
+    }
+    if(isExiting()){
+      break;
+    }
+  }
+}
 
 // Arduino
 
@@ -170,7 +287,6 @@ void setup(){
 	current->submenu->type = FUNCTION;
 	current->submenu->function = nfcID;
 
-
 	root = current;
 
 	//Add one more
@@ -178,16 +294,19 @@ void setup(){
 	current->next = initializeMenuItem(current);
 	current = current->next;
 	
-	sprintf(current->text, "Second one");
+	sprintf(current->text, "GPS");
+  current->type = SUBMENU;
 
-	// Added one more
+  current->submenu = initializeMenuItem();
 
-	//Add one more
+  sprintf(current->submenu->text, "GPS Location");
+  current->submenu->type = FUNCTION;
+  current->submenu->function = gpsLocation;
 
-	current->next = initializeMenuItem(current);
-	current = current->next;
-	
-	sprintf(current->text, "Third one");
+  current->submenu->next = initializeMenuItem(current->submenu);
+  sprintf(current->submenu->next->text, "Time");
+  current->submenu->next->type = FUNCTION;
+  current->submenu->next->function = gpsTime;
 
 	// Added one more
 	
